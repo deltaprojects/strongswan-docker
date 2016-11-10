@@ -9,9 +9,9 @@
 INTERFACE=${IPTABLES_INTERFACE:+-i ${IPTABLES_INTERFACE}}
 ENDPOINTS=${IPTABLES_ENDPOINTS:+-s ${IPTABLES_ENDPOINTS}}
 if [[ x${IPTABLES} == 'xtrue' ]]; then
-  iptables -A INPUT ${INTERFACE} -p esp -j ACCEPT
-  iptables -A INPUT ${ENDPOINTS} ${INTERFACE} -p udp -m udp --sport 500 --dport 500 -j ACCEPT
-  iptables -A INPUT ${ENDPOINTS} ${INTERFACE} -p udp -m udp --sport 4500 --dport 4500 -j ACCEPT
+  iptables -I INPUT ${INTERFACE} -p esp -j ACCEPT
+  iptables -I INPUT ${ENDPOINTS} ${INTERFACE} -p udp -m udp --sport 500 --dport 500 -j ACCEPT
+  iptables -I INPUT ${ENDPOINTS} ${INTERFACE} -p udp -m udp --sport 4500 --dport 4500 -j ACCEPT
 fi
 
 exec ipsec start --nofork "$@"
