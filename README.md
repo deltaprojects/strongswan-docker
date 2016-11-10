@@ -16,12 +16,14 @@ So put your configuration files accordingly and mount the needed volumes.
 If you need to open up vpn access using iptables INPUT rules add following environment variable **IPTABLES=true** and it will add the following rules:
 
 ```
--A INPUT -i vlan5 -p esp -j ACCEPT
--A INPUT -i vlan5 -p udp -m udp --sport 500 --dport 500 -j ACCEPT
--A INPUT -i vlan5 -p udp -m udp --sport 4500 --dport 4500 -j ACCEPT
+-A INPUT -p esp -j ACCEPT
+-A INPUT -p udp -m udp --sport 500 --dport 500 -j ACCEPT
+-A INPUT -p udp -m udp --sport 4500 --dport 4500 -j ACCEPT
 ```
 
-If you need to limit specific hosts or subnets allowed to send data to port 500 and 4500 add the following environment variable **IPTABLES_ENDPOINTS=172.16.10.30/32,172.16.9.35/32** and the last two rules will.
+If you want to limit specific hosts or subnets allowed to send data to port 500 and 4500 add the following environment variable **IPTABLES_ENDPOINTS=172.16.10.30/32,172.16.9.35/32**.
+If you want to put the rules on specific interface add the following environment variable **IPTABLES_INTERFACE=bond0**.
+These two variables will add *-s XXX* and/or *-i XXX* to the iptables rules.
 
 
 ##### ipsec.conf: leftfirewall
@@ -37,8 +39,8 @@ docker pull deltaprojects/strongswan
 ##### run
 ```bash
 docker run -d --privileged --net=host \
-  -p 500:500/udp -p 4500:4500/udp \
   -e IPTABLES=true \
+  -e IPTABLES_INTERFACE=bond0 \
   -v '/lib/modules:/lib/modules:ro' \
   -v '/etc/localtime:/etc/localtime:ro' \
   -v '/etc/ipsec.docker:/etc/ipsec.docker:ro' \
@@ -61,15 +63,15 @@ conn googe-cloud-base
   ikelifetime=10h
   lifetime=3h
   left=%any
-  leftid=<LOCAL PUBLIC IP>
+  leftid=[LOCAL PUBLIC IP]
   leftsubnet=0.0.0.0/0
   leftauth=psk
   leftikeport=4500
 
 conn vpn01-europe-west1
   auto=start
-  right=<GOOGLE VPN IP>
-  rightsubnet=10.132.0.0/20,10.133.0.0/20,<COMMA-SEPARATED-LIST-OF-YOUR-GOOGLE-SUBNETS>
+  right=[GOOGLE VPN IP]
+  rightsubnet=10.132.0.0/20,10.133.0.0/20,[COMMA-SEPARATED-LIST-OF-YOUR-GOOGLE-SUBNETS]
   rightauth=psk
   rightikeport=4500
   also=googe-cloud-base
@@ -77,14 +79,14 @@ conn vpn01-europe-west1
 
 ```bash
 # cat /etc/ipsec.docker/ipsec.gc.secrets
-<GOOGLE VPN IP> : PSK "PRE-SHARED-KEY-HERE"
-````
+[GOOGLE VPN IP] : PSK "PRE-SHARED-KEY-HERE"
+```
 
 ```bash
 docker run -d --privileged --net=host \
-  -p 500:500/udp -p 4500:4500/udp \
   -e IPTABLES=true \
-  -e IPTABLES_ENDPOINTS=<GOOGLE VPN IP>/32 \
+  -e IPTABLES_INTERFACE=bond0 \
+  -e IPTABLES_ENDPOINTS=[GOOGLE VPN IP]/32 \
   -v '/lib/modules:/lib/modules:ro' \
   -v '/etc/localtime:/etc/localtime:ro' \
   -v '/etc/ipsec.docker:/etc/ipsec.docker:ro' \
