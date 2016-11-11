@@ -2,12 +2,11 @@
 #
 # entrypoint for strongswan
 #
-# sysctl -w net.ipv4.ip_forward=1
 # env |grep vpn_ | while read line; do echo $line| cut -d= -f2- >> /etc/ipsec.d/secrets.local.conf ; done
-# exec ipsec start --nofork --conf /etc/ipsec.d/ipsec.conf "$@"
 
 INTERFACE=${IPTABLES_INTERFACE:+-i ${IPTABLES_INTERFACE}}
 ENDPOINTS=${IPTABLES_ENDPOINTS:+-s ${IPTABLES_ENDPOINTS}}
+# add iptables rules if IPTABLES=true
 if [[ x${IPTABLES} == 'xtrue' ]]; then
   iptables -I INPUT ${INTERFACE} -p esp -j ACCEPT
   iptables -I INPUT ${ENDPOINTS} ${INTERFACE} -p udp -m udp --sport 500 --dport 500 -j ACCEPT
@@ -15,11 +14,37 @@ if [[ x${IPTABLES} == 'xtrue' ]]; then
   iptables -t nat -I POSTROUTING -m policy --dir out --pol ipsec -j ACCEPT
 fi
 
-exec ipsec start --nofork "$@"
+_revipt() {
+  if [[ x${IPTABLES} == 'xtrue' ]]; then
+    echo "Removing iptables rules..."
+    iptables -D INPUT ${INTERFACE} -p esp -j ACCEPT
+    iptables -D INPUT ${ENDPOINTS} ${INTERFACE} -p udp -m udp --sport 500 --dport 500 -j ACCEPT
+    iptables -D INPUT ${ENDPOINTS} ${INTERFACE} -p udp -m udp --sport 4500 --dport 4500 -j ACCEPT
+    iptables -t nat -D POSTROUTING -m policy --dir out --pol ipsec -j ACCEPT
+  fi
+}
 
-if [[ x${IPTABLES} == 'xtrue' ]]; then
-  iptables -D INPUT ${INTERFACE} -p esp -j ACCEPT
-  iptables -D INPUT ${ENDPOINTS} ${INTERFACE} -p udp -m udp --sport 500 --dport 500 -j ACCEPT
-  iptables -D INPUT ${ENDPOINTS} ${INTERFACE} -p udp -m udp --sport 4500 --dport 4500 -j ACCEPT
-  iptables -t nat -D POSTROUTING -m policy --dir out --pol ipsec -j ACCEPT
-fi
+# enable ip forward
+sysctl -w net.ipv4.ip_forward=1
+
+# function to use when this script recieves a SIGTERM.
+_term() {
+  echo "Caught SIGTERM signal! Stopping ipsec..."
+  #kill -TERM "$child" 2>/dev/null
+  ipsec stop
+  # remove iptable rules
+  _revipt
+}
+
+# catch the SIGTERM
+trap _term SIGTERM
+
+echo "Starting strongSwan/ipsec..."
+ipsec start --nofork "$@" &
+
+child=$!
+# wait for child process to exit
+wait "$child"
+
+# remove iptable rules
+_revipt
