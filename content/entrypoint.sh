@@ -6,12 +6,15 @@
 
 INTERFACE=${IPTABLES_INTERFACE:+-i ${IPTABLES_INTERFACE}}
 ENDPOINTS=${IPTABLES_ENDPOINTS:+-s ${IPTABLES_ENDPOINTS}}
+RIGHTSUBNET=$(grep rightsubnet /etc/ipsec.docker/ipsec.gc.conf  | cut -d"=" -f2)
+
 # add iptables rules if IPTABLES=true
 if [[ x${IPTABLES} == 'xtrue' ]]; then
   iptables -I INPUT ${INTERFACE} -p esp -j ACCEPT
   iptables -I INPUT ${ENDPOINTS} ${INTERFACE} -p udp -m udp --sport 500 --dport 500 -j ACCEPT
   iptables -I INPUT ${ENDPOINTS} ${INTERFACE} -p udp -m udp --sport 4500 --dport 4500 -j ACCEPT
   iptables -t nat -I POSTROUTING -m policy --dir out --pol ipsec -j ACCEPT
+  iptables -t nat -I POSTROUTING -s ${RIGHTSUBNET} -j ACCEPT
 fi
 
 _revipt() {
@@ -21,6 +24,7 @@ _revipt() {
     iptables -D INPUT ${ENDPOINTS} ${INTERFACE} -p udp -m udp --sport 500 --dport 500 -j ACCEPT
     iptables -D INPUT ${ENDPOINTS} ${INTERFACE} -p udp -m udp --sport 4500 --dport 4500 -j ACCEPT
     iptables -t nat -D POSTROUTING -m policy --dir out --pol ipsec -j ACCEPT
+    iptables -t nat -D POSTROUTING -s ${RIGHTSUBNET} -j ACCEPT
   fi
 }
 
