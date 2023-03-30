@@ -6,7 +6,7 @@
 
 INTERFACE=${IPTABLES_INTERFACE:+-i ${IPTABLES_INTERFACE}}
 ENDPOINTS=${IPTABLES_ENDPOINTS:+-s ${IPTABLES_ENDPOINTS}}
-RIGHTSUBNET=$(grep rightsubnet /etc/ipsec.docker/ipsec.gc.conf  | cut -d"=" -f2)
+RIGHTSUBNETS=$(grep rightsubnet /etc/ipsec.docker/ipsec.*.conf | cut -d"=" -f2 | sort | uniq)
 
 # add iptables rules if IPTABLES=true
 if [[ x${IPTABLES} == 'xtrue' ]]; then
@@ -14,7 +14,9 @@ if [[ x${IPTABLES} == 'xtrue' ]]; then
   iptables -I INPUT ${ENDPOINTS} ${INTERFACE} -p udp -m udp --sport 500 --dport 500 -j ACCEPT
   iptables -I INPUT ${ENDPOINTS} ${INTERFACE} -p udp -m udp --sport 4500 --dport 4500 -j ACCEPT
   iptables -t nat -I POSTROUTING -m policy --dir out --pol ipsec -j ACCEPT
-  iptables -t nat -I POSTROUTING -s ${RIGHTSUBNET} -j ACCEPT
+  for RIGHTSUBNET in ${RIGHTSUBNETS}; do
+    iptables -t nat -I POSTROUTING -s ${RIGHTSUBNET} -j ACCEPT
+  done
 fi
 
 _revipt() {
@@ -24,7 +26,9 @@ _revipt() {
     iptables -D INPUT ${ENDPOINTS} ${INTERFACE} -p udp -m udp --sport 500 --dport 500 -j ACCEPT
     iptables -D INPUT ${ENDPOINTS} ${INTERFACE} -p udp -m udp --sport 4500 --dport 4500 -j ACCEPT
     iptables -t nat -D POSTROUTING -m policy --dir out --pol ipsec -j ACCEPT
-    iptables -t nat -D POSTROUTING -s ${RIGHTSUBNET} -j ACCEPT
+    for RIGHTSUBNET in ${RIGHTSUBNETS}; do
+      iptables -t nat -D POSTROUTING -s ${RIGHTSUBNET} -j ACCEPT
+    done
   fi
 }
 
