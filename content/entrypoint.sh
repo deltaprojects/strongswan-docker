@@ -17,7 +17,6 @@ if [[ x${IPTABLES} == 'xtrue' ]]; then
   for RIGHTSUBNET in ${RIGHTSUBNETS}; do
     iptables -t nat -I POSTROUTING -s ${RIGHTSUBNET} -j ACCEPT
   done
-  iptables -t nat -I POSTROUTING -s ${RIGHTSUBNET} -j ACCEPT
 fi
 
 _revipt() {
