@@ -41,6 +41,7 @@ docker pull deltaprojects/strongswan
 docker run -d --privileged --net=host \
   -e IPTABLES=true \
   -e IPTABLES_INTERFACE=bond0 \
+  -e IPTABLES_ENDPOINTS=169.254.0.10/32 \
   -v '/lib/modules:/lib/modules:ro' \
   -v '/etc/localtime:/etc/localtime:ro' \
   -v '/etc/ipsec.docker:/etc/ipsec.docker:ro' \
